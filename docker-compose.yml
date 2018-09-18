@@ -1,0 +1,48 @@
+version: '2'
+services:
+
+  php:
+    image: jguyomard/laravel-php:7.2
+    volumes:
+    - ./docroot/:/var/www/
+    - $HOME/.composer/:$HOME/.composer/
+    environment:
+    - "DB_HOST=mysql"
+    - "DB_DATABASE=laravel"
+    - "DB_USERNAME=laravel"
+    - "DB_PASSWORD=laravel"
+
+  nginx:
+    image: jguyomard/laravel-nginx:1.13
+    environment:
+      NGINX_SERVER_ROOT: /var/www/
+    volumes_from:
+    - php
+    labels:
+    - "traefik.backend=nginx"
+    - "traefik.port=80"
+    - "traefik.frontend.rule=Host:laravel.docker.localhost"
+
+  mysql:
+    image: mysql:5.7
+    volumes:
+    - mysqldata:/var/lib/mysql
+    environment:
+    - "MYSQL_ROOT_PASSWORD=secret"
+    - "MYSQL_DATABASE=laravel"
+    - "MYSQL_USER=laravel"
+    - "MYSQL_PASSWORD=laravel"
+  #    ports:
+  #        - "3306:3306"
+
+  traefik:
+    image: traefik
+    restart: unless-stopped
+    command: -c /dev/null --web --docker --logLevel=INFO
+    ports:
+    - '8080:80'
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  mysqldata:

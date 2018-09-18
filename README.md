@@ -2,7 +2,7 @@ rest-api is a demo Laravel project used to create RESTful api. The folder struct
 
 1. setup.sh - Bash script to setup the project
 2. docroot - Laravel project folder
-3. laradock - [Laradock](http://laradock.io/) repo to setup docker for Laravel.
+3. docker-compose.yml - Docker compose file to create the docker services.
 
 There are thre endpoints -
 
