@@ -2,16 +2,16 @@
 # Script only works if sudo caches the password for a few minutes
 sudo true
 
-if [ ! -z "$(which docker)" ]; then
+if [ -z "$(which docker)" ]; then
     wget -qO- https://get.docker.com/ | sh
 fi
 
-if [ ! -z "$(which git)" ]; then
+if [ -z "$(which git)" ]; then
     # Install git
     sudo apt-get install git -y
 fi
 
-if [ ! -z "$(which docker-compose)" ]; then
+if [ -z "$(which docker-compose)" ]; then
     # Install docker-compose
     COMPOSE_VERSION=`git ls-remote https://github.com/docker/compose | grep refs/tags | grep -oP "[0-9]+\.[0-9][0-9]+\.[0-9]+$" | tail -n 1`
     sudo sh -c "curl -L https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose"
@@ -26,15 +26,16 @@ if [ ! -z "$(which docker-compose)" ]; then
     sudo chmod +x /usr/local/bin/docker-cleanup
 fi
 
-# Docker container creation
-sudo docker-compose up -d
-
-if [ ! -z "$(which composer)" ]; then
-    sudo apt install curl php-cli php-mbstring git unzip
+if [ -z "$(which composer)" ]; then
+    sudo apt install curl php-cli php-mbstring git unzip -y
     cd ~ && curl -sS https://getcomposer.org/installer -o composer-setup.php
     sudo php composer-setup.php --install-dir=/usr/local/bin --filename=composer
 fi
-sudo docker exec -it rest-api_php_1 chmod 777 -R storage
+
+# Docker container creation
+sudo docker-compose up -d
+
+sudo docker exec -it rest-api_php_1 chmod 777 -R docroot/storage docroot/bootstrap/cache
 
 sudo docker exec -it rest-api_php_1 composer install
 
@@ -46,12 +47,16 @@ sudo docker exec -it rest-api_php_1 php artisan migrate
 
 sudo docker exec -it rest-api_php_1 php artisan db:seed
 
-sudo echo '127.0.0.1 laravel.docker.localhost' | cat >> /etc/hosts
+sudo sed -i "$ a 127.0.0.1 laravel.docker.localhost" /etc/hosts
 
 cp docroot/vendor/alexpechkarev/google-maps/src/config/googlemaps.php docroot/config/googlemaps.php
 
 sed -i "s/ADD_YOUR_SERVICE_KEY_HERE/AIzaSyCNPu6CvUjWJqrBWTbP2cfOtUWVdxla7oU/g" docroot/config/googlemaps.php
 
-sed -i "s/View::class,/&\n\t'GoogleMaps' => GoogleMaps\\\Facade\\\GoogleMapsFacade::class,/g" docroot/config/app.php
+if grep "GoogleMapsFacade" docroot/config/app.php; then
+    sed -i "s/View::class,/&\n\t'GoogleMaps' => GoogleMaps\\\Facade\\\GoogleMapsFacade::class,/g" docroot/config/app.php
+fi
 
-sed -i "s/RouteServiceProvider::class,/&\n\t\tGoogleMaps\\\ServiceProvider\\\GoogleMapsServiceProvider::class,/g" docroot/config/app.php
+if grep "GoogleMapsServiceProvider" docroot/config/app.php; then
+    sed -i "s/RouteServiceProvider::class,/&\n\t\tGoogleMaps\\\ServiceProvider\\\GoogleMapsServiceProvider::class,/g" docroot/config/app.php
+fi
